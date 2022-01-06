@@ -1,0 +1,641 @@
+<html>
+<head>
+<style>
+#frame{
+border:1px solid black;
+width:890px;
+
+height:600px;
+display:block;
+float:left;
+background:black;
+}
+#panel{
+background:black;
+display:block;
+float:left;
+width:20%;
+height:600px;
+color:#00F746;
+}
+.panelIcon{width50px;height:50px;margin:1px;}
+.polje{
+width:80px;
+height:80px;
+border:1px solid #3D523F;
+display:block;
+float:left;}
+#warbanner{
+width:120px;
+height:150px
+}
+.player1{
+.polje;
+border:1px solid blue;
+}
+.player2{
+.polje;
+border:1px solid red;
+}
+
+.blue{border:1px solid #69859A;}
+#gameFrame{
+display:block;
+background:black;
+
+float:left;
+}
+body{
+background:black;
+}
+#battleframe{
+
+width:600;
+height:600;
+display:none;
+color:red;
+font-size: 250%;
+}
+.flipHorisontaly{
+-moz-transform: scaleX(-1);
+        -o-transform: scaleX(-1);
+        -webkit-transform: scaleX(-1);
+        transform: scaleX(-1);
+        filter: FlipH;
+        -ms-filter: "FlipH";
+}
+#left{width:200;height:200;background-image:url('img/unit20.png');background-size:100% 100%;background-repeat: no-repeat;display:block;float:left;}
+#middle{width:200;height:200;background-image:url('img/grass.png');background-size:100% 100%;background-repeat: no-repeat;display:block;float:left;}
+#right{width:200;height:200;background-image:url('img/unit20.png');;background-size:100% 100%;background-repeat: no-repeat;display:block;float:left;}
+#upright{width:200;height:200;background-image:url('img/unit20.png');background-size:100% 100%;background-repeat: no-repeat;display:block;float:left;}
+</style>
+
+</head>
+<body>
+ <audio id="soundtrack" autoplay loop>
+  <source src="horse.ogg" type="audio/ogg">
+  <source src="snd/soundtrack1.mp3" type="audio/mpeg">
+  Your browser does not support the audio tag.
+</audio> 
+ <audio id="sound">
+  <source src="snd/warriorb.ogg" type="audio/ogg">
+  Your browser does not support the audio tag.
+</audio> 
+<div id="gameFrame">
+<div id="frame">
+</div>
+<div id="panel">
+
+<fieldset>
+<legend>Player:<span id="activePlayer"></span></legend>
+<img id="warbanner" src="img/warbanner.png">
+</fieldset>
+
+<fieldset>
+<legend>Resources</legend>
+Power<br>
+<progress value="0" max="20" id="powerBar" onmouseover="displayInfo('Powerplant capacity')">
+</progress><br>
+A-bomb<br>
+<progress value="0" max="20" id="abomb" onmouseover="displayInfo('A-BOMB')">
+</progress><br>
+Money:<span id="money">0</span>&nbsp Powerplant:<span id="powerplant">0</span><br>
+Units:<span id="units">0</span>&nbsp Tech center:<span id="tech">0</span><br>
+Rafinery:<span id="houses">0</span>&nbsp Radar:<span id="radar">0</span><br>
+Baracks:<span id="baracks">0</span>&nbsp Missile silo:<span id="nukesilo">0</span><br>
+Towers:<span id="towers">0</span><br>
+</fieldset>
+<fieldset>
+<legend>Build</legend>
+<img class='panelIcon' src="img/house.png" alt='Build house' onclick="buildHouse()" onmouseover="displayInfo(this.alt)">
+<img class='panelIcon' src="img/baracks.png" alt='Build baracks' onclick="buildBaracks()" onmouseover="displayInfo(this.alt)">
+<img class='panelIcon' src="img/powerplant.png" alt='Build powerplant' onclick="buildPowerplant()" onmouseover="displayInfo(this.alt)">
+<img class='panelIcon' src="img/radar.png" alt='Build radar dome' onclick="buildRadar()" onmouseover="displayInfo(this.alt)">
+<img class='panelIcon' src="img/tech.png" alt='Build tech center' onclick="buildTech()" onmouseover="displayInfo(this.alt)">
+<img class='panelIcon' src="img/nuclearsilo.png" alt='Build nuclear silo' onclick="buildNuke()" onmouseover="displayInfo(this.alt)">
+<img class='panelIcon' src="img/unit.png"  alt='Train unit' onclick="trainUnit()" onmouseover="displayInfo(this.alt)">
+<img class='panelIcon' src="img/tower.png"  alt='Build tower' onclick="buildTower()" onmouseover="displayInfo(this.alt)">
+<img class='panelIcon' src="img/moveunit.png"  alt='Move units' onclick="moveUnitsPrepare()" onmouseover="displayInfo(this.alt)">
+<img class='panelIcon' src="img/hourglass.png" alt='End turn' onclick="endTurn()" onmouseover="displayInfo(this.alt)">
+<img id="launchNuke" class='panelIcon' src="img/abomb.png"  alt='Launch nuclear missile' onclick="launchNukebomb()" onmouseover="displayInfo(this.alt)">
+</fieldset>
+<fieldset>
+<legend>Messages:</legend>
+<p id="sysmessage"></p>
+</fieldset>
+</div>
+
+
+</div>
+
+<div id="battleFrame">
+<div id="middle"></div>
+<div id="middle"></div>
+<div id="upright">
+	<span id="towerCount"></span>
+
+</div>
+<div id="left" class="flipHorisontaly"></div>
+<div id="middle"></div>
+<div id="right"></div>
+<div id="middle">
+Attacker:<span id='pl1_units'>0</span>
+
+
+</div>
+<div id="middle"></div>
+<div id="middle">
+Defender:<span id='pl2_units'>0</span>
+</div>
+
+</div>
+</body>
+<script>
+function displayInfo(info){
+
+document.getElementById('sysmessage').innerHTML=info;
+}
+var selectedField=0;
+var mapWidth=10,
+mapHeight=10;
+var movingUnits=false;
+var unitsAmmount;
+var fieldBefore;
+var activePlayer=2;
+var activeMoney;
+var battleInterval;
+var powerNeeded,
+powerSupply;
+var radars;
+var baracksCapacity,unitSum;
+var nukeSum,nukeStatus=[0,0,0];
+var nukeTarget=false;
+var powerplant=[0,0,0,0,0,0,0,0,0,0,
+0,0,0,0,0,0,0,0,0,0,
+0,0,0,0,0,0,0,0,0,0,
+0,0,0,0,0,0,0,0,0,0,
+0,0,0,0,0,0,0,0,0,0,
+0,0,0,0,0,0,0,0,0,0,
+0,0,0,0,0,0,0,0,0,0,
+0,0,0,0,0,0,0,0,0,0,
+0,0,0,0,0,0,0,0,0,0,
+0,0,0,0,0,0,0,0,0,0];
+var movement=[0,0,0,0,0,0,0,0,0,0,
+0,0,0,0,0,0,0,0,0,0,
+0,0,0,0,0,0,0,0,0,0,
+0,0,0,0,0,0,0,0,0,0,
+0,0,0,0,0,0,0,0,0,0,
+0,0,0,0,0,0,0,0,0,0,
+0,0,0,0,0,0,0,0,0,0,
+0,0,0,0,0,0,0,0,0,0,
+0,0,0,0,0,0,0,0,0,0,
+0,0,0,0,0,0,0,0,0,0];
+var mapa=[1,2,1,1,1,1,1,1,4,1,
+1,1,1,1,1,1,4,1,1,1,
+1,1,1,1,1,1,1,4,1,1,
+1,1,1,1,1,1,1,1,1,1,
+4,1,1,1,1,1,4,1,1,1,
+4,4,1,3,3,3,3,1,3,3,
+1,4,1,3,4,1,1,1,1,1,
+1,1,1,3,4,4,1,1,1,1,
+1,1,1,3,1,4,1,1,1,1,
+1,1,1,3,1,1,1,1,1,1];
+var units=[0,0,0,0,0,0,0,0,0,0,
+0,0,5,0,20,0,0,0,0,0,
+0,0,0,0,0,0,0,0,0,0,
+0,0,0,0,0,0,0,0,0,0,
+0,0,0,0,0,0,0,0,0,0,
+0,0,0,0,0,1,0,0,0,0,
+0,0,0,0,0,0,0,0,0,0,
+0,0,0,0,0,0,0,0,0,0,
+0,0,0,0,0,0,0,0,10,0,
+0,0,0,0,0,0,0,0,0,0];
+var houses=[0,1,0,0,0,0,0,0,0,0,
+0,0,0,0,0,0,0,0,0,0,
+0,1,0,1,0,1,0,0,0,1,
+0,0,0,0,0,0,0,0,0,0,
+0,0,4,0,0,0,0,0,0,0,
+0,0,0,0,0,0,3,0,0,0,
+0,0,0,3,0,0,2,0,0,0,
+0,0,4,0,0,0,2,0,0,0,
+0,0,0,0,0,0,0,0,0,0,
+1,0,0,0,0,1,0,0,0,1];
+var towers=[0,2,0,0,0,0,0,0,0,0,
+0,0,0,0,0,0,0,0,0,0,
+0,0,0,0,0,0,0,0,0,0,
+0,0,0,0,0,0,0,0,0,0,
+0,0,0,1,0,0,0,0,0,0,
+0,0,0,0,0,0,0,0,0,0,
+0,0,0,0,0,0,2,0,0,0,
+0,0,0,0,0,0,0,0,0,0,
+0,0,0,0,0,0,0,0,1,0,
+0,0,0,0,0,0,0,0,0,0];
+var ownership=[1,1,1,0,0,0,0,0,0,0,
+1,1,1,0,2,0,0,0,0,0,
+0,0,0,0,0,0,0,0,0,0,
+0,0,0,0,0,0,0,0,0,0,
+0,0,0,0,0,0,0,0,0,0,
+0,0,0,0,0,0,0,0,0,0,
+0,0,0,0,0,0,0,0,0,0,
+0,0,0,0,0,0,0,0,0,0,
+0,0,0,0,0,0,0,2,2,2,
+0,0,0,0,0,0,0,2,2,2];
+var baracks=[0,0,0,0,0,0,0,0,0,0,
+0,0,0,0,20,0,0,0,0,0,
+0,0,0,0,0,0,0,0,0,0,
+0,0,0,0,0,0,0,0,0,0,
+0,0,0,0,0,0,0,0,0,0,
+0,0,0,0,0,1,0,0,0,0,
+0,0,0,0,0,0,0,0,0,0,
+0,0,0,0,0,0,0,0,0,0,
+0,0,0,0,0,0,0,0,10,0,
+0,0,0,0,0,0,0,0,0,0];
+var tech=[0,0,0,0,0,0,0,0,0,0,
+0,0,0,0,0,0,0,0,0,0,
+0,0,0,0,0,0,0,0,0,0,
+0,0,0,0,0,0,0,0,0,0,
+0,0,0,0,0,0,0,0,0,0,
+0,0,0,0,0,1,0,0,0,0,
+0,0,0,0,0,0,0,0,0,0,
+0,0,0,0,0,0,0,0,0,0,
+0,0,0,0,0,0,0,0,0,0,
+0,0,0,0,0,0,0,0,0,0];
+var radar=[0,0,0,0,0,0,0,0,0,0,
+0,0,0,0,0,0,0,0,0,0,
+0,0,0,0,0,0,0,0,0,0,
+0,0,0,0,0,0,0,0,0,0,
+0,0,0,0,0,0,0,0,0,0,
+0,0,0,0,0,1,0,0,0,0,
+0,0,0,0,0,0,0,0,0,0,
+0,0,0,0,0,0,0,0,0,0,
+0,0,0,0,0,0,0,0,0,0,
+0,0,0,0,0,0,0,0,0,0];
+var nuke=[0,0,0,0,0,0,0,0,0,0,
+0,0,0,0,0,0,0,0,0,0,
+0,0,0,0,0,0,0,0,0,0,
+0,0,0,0,0,0,0,0,0,0,
+0,0,0,0,0,0,0,0,0,0,
+0,0,0,0,0,1,0,0,0,0,
+0,0,0,0,0,0,0,0,0,0,
+0,0,0,0,0,0,0,0,0,0,
+0,0,0,0,0,0,0,0,0,0,
+0,0,0,0,0,0,0,0,0,0];
+var battleSound,sound=0;
+var gameInit=true;
+var money1,money2;
+endTurn();
+function redraw(){
+var pl1_fieldSum=0;
+var pl2_fieldSum=0;
+powerNeeded=0;
+powerSupply=0;
+baracksCapacity=0;
+unitSum=0;
+radarSum=0;
+nukeSum=0;
+for (var y=0;y<10;y++){
+
+	for (var x=0;x<10;x++){
+	/* check for winning*/
+	if (ownership[10*y+x]==1) pl1_fieldSum++ ;
+	if (ownership[10*y+x]==2) pl2_fieldSum++ ;
+	/*check for power supply*/
+	if (ownership[10*y+x]==activePlayer){
+	powerNeeded=powerNeeded+baracks[10*y+x]+houses[10*y+x]+towers[10*y+x]+tech[10*y+x]*2+radar[10*y+x]*2+nuke[10*y+x]*3;
+	powerSupply=powerSupply+powerplant[10*y+x]*5;
+	baracksCapacity=baracksCapacity+baracks[10*y+x]*20;
+	unitSum=unitSum+units[10*y+x];
+	radarSum=radarSum+radar[10*y+x];
+	nukeSum=nukeSum+nuke[10*y+x];
+	} 
+	//Math.floor((powerSupply / powerNeeded) * 100)
+	}
+	
+	if (powerSupply-powerNeeded>0) {document.getElementById('powerBar').value= (powerSupply-powerNeeded);}
+	else document.getElementById('powerBar').value=0;
+	
+	if (nukeStatus[activePlayer]<20) {
+		document.getElementById('abomb').value=nukeStatus[activePlayer];
+		document.getElementById('launchNuke').style.display="none";}
+	else {document.getElementById('launchNuke').style.display="block";
+	document.getElementById('abomb').value=20;
+	}
+}
+if (pl1_fieldSum==0) {alert("Player 2 has conquered Player 1!");return}
+if (pl2_fieldSum==0) {alert("Player 1 has conquered Player 2!");return}
+
+document.getElementById('money').innerHTML=activeMoney;
+document.getElementById('activePlayer').innerHTML=activePlayer;
+if (activePlayer==1)  document.getElementById('warbanner').setAttribute("src", "img/bluebanner.png");
+if (activePlayer==2)  document.getElementById('warbanner').setAttribute("src", "img/redbanner.png");
+document.getElementById('frame').innerHTML="";
+for (var y=0;y<10;y++){
+
+for (var x=0;x<10;x++){
+
+var polje = document.createElement("img");
+polje.setAttribute('class',"polje");
+if (mapa[y*mapWidth+x]==1) polje.setAttribute('src',"img/grass.png");
+if (mapa[y*mapWidth+x]==2) polje.setAttribute('src',"img/castle.png");
+if (units[y*mapWidth+x]>0) polje.setAttribute('src',"img/unit.png");
+if (units[y*mapWidth+x]>=5) polje.setAttribute('src',"img/unit5.png");
+if (units[y*mapWidth+x]>=10) polje.setAttribute('src',"img/unit10.png");
+if (units[y*mapWidth+x]>=15) polje.setAttribute('src',"img/unit15.png");
+if (units[y*mapWidth+x]>=20) polje.setAttribute('src',"img/unit20.png");
+if (houses[y*mapWidth+x]>0) polje.setAttribute('src',"img/house.png");
+if (baracks[y*mapWidth+x]>0) polje.setAttribute('src',"img/baracks.png");
+if (powerplant[y*mapWidth+x]>0) polje.setAttribute('src',"img/powerplant.png");
+if (radar[y*mapWidth+x]>0) polje.setAttribute('src',"img/radar.png");
+if (tech[y*mapWidth+x]>0) polje.setAttribute('src',"img/tech.png");
+if (nuke[y*mapWidth+x]>0) polje.setAttribute('src',"img/nuclearsilo.png");
+if (towers[y*mapWidth+x]>0) polje.setAttribute('src',"img/tower.png");
+if (mapa[y*mapWidth+x]==3) {polje.setAttribute('src',"img/water.jpg");polje.setAttribute('class',"polje blue")}
+if (mapa[y*mapWidth+x]==4) {polje.setAttribute('src',"img/forrest.png");}
+if (towers[y*mapWidth+x]>0 && houses[y*mapWidth+x]>0) polje.setAttribute('src',"img/castle.png");
+
+if (ownership[y*mapWidth+x]>0)  polje.setAttribute("class", "polje player1");
+if (ownership[y*mapWidth+x]==2)  polje.setAttribute("class", "polje player2");
+
+polje.setAttribute('id',"polje"+y*mapWidth+x);
+polje.setAttribute('onclick',"fieldClick("+(y*mapWidth+x)+")");
+document.getElementById('frame').appendChild(polje); 
+
+}
+
+}
+}
+function fieldClick(fieldNo){
+document.getElementById('sysmessage').innerHTML="";
+if (nukeTarget==true) {playSound("nuclearweaponlauched");alert('Nuclear weapon launched!');playSound("nukeboom");
+houses[fieldNo]=0;
+towers[fieldNo]=0;
+units[fieldNo]=0;
+tech[fieldNo]=0;
+baracks[fieldNo]=0;
+powerplant[fieldNo]=0;
+nuke[fieldNo]=0;
+nukeTarget=false;
+redraw();
+return;}
+if (movingUnits==false){
+if (ownership[fieldNo]!=activePlayer && radarSum<=0) {document.getElementById('sysmessage').innerHTML="This area is not in our domain, sir";playSound("unabletocomply");return;}
+playSound("click")
+selectedField=fieldNo;
+document.getElementById('units').innerHTML=units[fieldNo];
+document.getElementById('houses').innerHTML=houses[fieldNo];
+document.getElementById('towers').innerHTML=towers[fieldNo];
+}
+if (movingUnits==true){
+
+if (mapa[fieldNo]==3) {document.getElementById('sysmessage').innerHTML="You cannot move accross water";playSound("unabletocomply");return;movingUnits=false;}
+
+if (fieldNo==fieldBefore+1 || fieldNo==fieldBefore-1 || fieldNo==fieldBefore+9 || fieldNo==fieldBefore+10 || fieldNo==fieldBefore+11 || fieldNo==fieldBefore-9 || fieldNo==fieldBefore-10 || fieldNo==fieldBefore-11  ){
+playSound("unit_move1");
+movement[fieldNo]=1;
+units[fieldBefore]=parseInt(units[fieldBefore])-unitsAmmount;
+
+if (ownership[fieldNo]!=activePlayer && units[fieldNo]>0) {
+battle(fieldNo);
+return;
+}
+
+units[fieldNo]=parseInt(units[fieldNo])+parseInt(unitsAmmount);
+
+
+movingUnits=false;
+
+ownership[fieldNo]=activePlayer;
+
+
+
+fieldNo=fieldBefore;
+document.getElementById('sysmessage').innerHTML='';
+
+redraw();
+}
+else document.getElementById('sysmessage').innerHTML="You can move your units only on a field nearby";
+}
+}
+function buildHouse(){
+
+
+if (mapa[selectedField]==3) {document.getElementById('sysmessage').innerHTML="You cannot build on water";playSound("unabletocomply");return}
+if (document.getElementById('powerBar').value==0 ) {document.getElementById('sysmessage').innerHTML="Low power. Build a power plant.";playSound("lowpower");return}
+if (activeMoney<50) {document.getElementById('sysmessage').innerHTML="insufficient funds(50)";playSound("insufficientfunds");return}
+
+if (ownership[selectedField]==activePlayer){
+houses[selectedField]++;
+playSound("constructioncomplete");
+document.getElementById('houses').innerHTML=houses[selectedField];
+activeMoney=activeMoney-50;
+
+redraw();
+}
+}
+function buildRadar(){
+if (mapa[selectedField]==3) {document.getElementById('sysmessage').innerHTML="You cannot build on water";playSound("unabletocomply");return}
+if (document.getElementById('powerBar').value==0 ) {document.getElementById('sysmessage').innerHTML="Low power. Build a power plant.";playSound("lowpower");return}
+if (activeMoney<150) {document.getElementById('sysmessage').innerHTML="insufficient funds(150)";playSound("insufficientfunds");return}
+
+if (ownership[selectedField]==activePlayer){
+radar[selectedField]++;
+playSound("constructioncomplete");
+document.getElementById('radar').innerHTML=radar[selectedField];
+activeMoney=activeMoney-150;
+
+redraw();
+}
+}
+function buildNuke(){
+if (mapa[selectedField]==3) {document.getElementById('sysmessage').innerHTML="You cannot build on water";playSound("unabletocomply");return}
+if (document.getElementById('powerBar').value==0 ) {document.getElementById('sysmessage').innerHTML="Low power. Build a power plant.";playSound("lowpower");return}
+if (activeMoney<200) {document.getElementById('sysmessage').innerHTML="insufficient funds(200)";playSound("insufficientfunds");return}
+
+if (ownership[selectedField]==activePlayer){
+nuke[selectedField]++;
+playSound("constructioncomplete");
+document.getElementById('nukesilo').innerHTML=nuke[selectedField];
+activeMoney=activeMoney-200;
+
+redraw();
+}
+}
+
+
+function buildBaracks(){
+
+if (mapa[selectedField]==3) {document.getElementById('sysmessage').innerHTML="You cannot build on water";playSound("unabletocomply");return}
+if (document.getElementById('powerBar').value==0 ) {document.getElementById('sysmessage').innerHTML="Low power. Build a power plant.";playSound("lowpower");return}
+if (activeMoney<80) {document.getElementById('sysmessage').innerHTML="insufficient funds(80)";playSound("insufficientfunds");return}
+
+if (ownership[selectedField]==activePlayer){
+baracks[selectedField]++;
+playSound("constructioncomplete");
+document.getElementById('houses').innerHTML=houses[selectedField];
+activeMoney=activeMoney-80;
+
+redraw();
+}
+}
+function buildPowerplant(){
+if (mapa[selectedField]==3) {document.getElementById('sysmessage').innerHTML="You cannot build on water";playSound("unabletocomply");return}
+if (activeMoney<40) {document.getElementById('sysmessage').innerHTML="insufficient funds(40)";playSound("insufficientfunds");return}
+if (ownership[selectedField]==activePlayer){
+powerplant[selectedField]++;
+playSound("constructioncomplete");
+document.getElementById('powerplant').innerHTML=powerplant[selectedField];
+activeMoney=activeMoney-40;
+redraw();
+}
+}
+
+
+function buildTower(){
+if (mapa[selectedField]==3) {document.getElementById('sysmessage').innerHTML="You cannot build on water";playSound("unabletocomply");return}
+if (document.getElementById('powerBar').value==0 ) {document.getElementById('sysmessage').innerHTML="Low power. Build a power plant.";playSound("lowpower");return}
+if (activeMoney<100) {document.getElementById('sysmessage').innerHTML="insufficient funds(100)";playSound("insufficientfunds");return}
+if (ownership[selectedField]==activePlayer){
+towers[selectedField]++;
+playSound("constructioncomplete");
+document.getElementById('towers').innerHTML=towers[selectedField];
+activeMoney=activeMoney-100;
+redraw();
+}
+}
+function buildTech(){
+if (mapa[selectedField]==3) {document.getElementById('sysmessage').innerHTML="You cannot build on water";playSound("unabletocomply");return}
+if (document.getElementById('powerBar').value==0 ) {document.getElementById('sysmessage').innerHTML="Low power. Build a power plant.";playSound("lowpower");return}
+if (activeMoney<150) {document.getElementById('sysmessage').innerHTML="insufficient funds(150)";playSound("insufficientfunds");return}
+if (ownership[selectedField]==activePlayer){
+tech[selectedField]++;
+playSound("constructioncomplete");
+document.getElementById('tech').innerHTML=tech[selectedField];
+activeMoney=activeMoney-150;
+redraw();
+}
+}
+
+
+
+
+function trainUnit(){
+if (ownership[selectedField]!=activePlayer){document.getElementById('sysmessage').innerHTML="You cannot train units on foreign land.<br>Conquer this land first.";playSound("unabletocomply");return}
+if (baracksCapacity==unitSum) {document.getElementById('sysmessage').innerHTML="Barracks can`t supply additional units.Build more barracks.";playSound("unabletocomply");return}
+if (activeMoney<10) {document.getElementById('sysmessage').innerHTML="insufficient funds(10)";playSound("insufficientfunds");return}
+if (baracks[selectedField]==0){document.getElementById('sysmessage').innerHTML="You need baracks on this field to train units.";playSound("unabletocomply");return}
+units[selectedField]++;
+playSound("unitready");
+document.getElementById('units').innerHTML=units[selectedField];
+activeMoney=activeMoney-10;
+
+redraw();
+}
+function moveUnitsPrepare(){
+if (movement[selectedField]==1) {playSound("unabletocomply");document.getElementById('sysmessage').innerHTML="Cannot move more than one field per turn";return}
+playSound("unit_select");
+movingUnits=true;
+fieldBefore=selectedField;
+unitsAmmount = prompt("Please enter ammount of units to move");
+if (units[selectedField]<unitsAmmount) {playSound("unabletocomply");document.getElementById('sysmessage').innerHTML="You have entered more units than available";ammount=0;movinUnits=false;return}
+document.getElementById('sysmessage').innerHTML='Select where to move units';
+}
+
+function countMoney(){
+var additionalMoney=0;
+for (var y=0;y<10;y++){
+
+	for (var x=0;x<10;x++){
+	if (ownership[10*y+x]==activePlayer) additionalMoney=additionalMoney+10*houses[10*y+x];
+	}
+}
+return additionalMoney;
+}
+function battle(fieldNo){
+
+document.getElementById("gameFrame").style.display="none";
+document.getElementById("battleFrame").style.display="block";
+if (towers[fieldNo]>0) document.getElementById("upright").style.backgroundImage="url('img/tower.png')";
+if (towers[fieldNo]==0) document.getElementById("upright").style.backgroundImage="url('img/grass.png')";
+document.getElementById("pl1_units").innerHTML=unitsAmmount;
+document.getElementById("pl2_units").innerHTML=units[fieldNo];
+document.getElementById("towerCount").innerHTML=towers[fieldNo];
+battleInterval=setInterval(function(){battleMath(fieldNo)},1000);
+warSound=setInterval(function(){battleSound(sound)},1000);
+}
+function battleSound(snd){
+
+if (snd==0) playSound("gunshot2");
+if (snd==1) playSound("scream1");
+if (snd==2) playSound("tank");
+if (snd==3) playSound("explosion2");
+if (snd==4) sound=-1;
+sound++;
+}
+function battleMath(fieldNo){
+var towerDamage=Math.floor((Math.random() * (towers[fieldNo]+1)) ); 
+
+var damage=Math.floor((Math.random() * 2) + 1); 
+if (damage==1) unitsAmmount=unitsAmmount-(1+towerDamage);
+if (damage==2) units[fieldNo]--;
+document.getElementById("pl1_units").innerHTML=unitsAmmount;
+document.getElementById("pl2_units").innerHTML=units[fieldNo];
+if (unitsAmmount==0 || units[fieldNo]==0) {
+
+if (unitsAmmount<=0) {playSound("missionfailed");alert ("Player "+activePlayer+" lost!")}
+if (units[fieldNo]<=0) {playSound("missionaccomplished");alert ("Player "+activePlayer+" wins!");ownership[fieldNo]=activePlayer;units[fieldNo]=unitsAmmount;towers[fieldNo]=0;}
+movingUnits=false;
+clearInterval(battleInterval);
+clearInterval(warSound);
+document.getElementById("gameFrame").style.display="block";
+document.getElementById("battleFrame").style.display="none";
+redraw();
+}
+}
+function playSound(sndFile){
+var audio = document.getElementById('sound');
+    audio.src = 'snd/'+sndFile+'.wav';        
+    audio.load();
+	audio.play();
+
+}
+function playSoundtrack(sndFile){
+var audio = document.getElementById('soundtrack');
+    audio.src = 'snd/'+sndFile+'.wav';        
+    audio.load();
+	audio.play();
+
+}
+function launchNukebomb(){
+playSound("selecttarget");
+alert('ode mas u propas');
+nukeTarget=true;
+}
+
+function endTurn(){
+nukeTarget=false;
+movingUnits=false;
+//reset movements
+movement=[0,0,0,0,0,0,0,0,0,0,
+0,0,0,0,0,0,0,0,0,0,
+0,0,0,0,0,0,0,0,0,0,
+0,0,0,0,0,0,0,0,0,0,
+0,0,0,0,0,0,0,0,0,0,
+0,0,0,0,0,0,0,0,0,0,
+0,0,0,0,0,0,0,0,0,0,
+0,0,0,0,0,0,0,0,0,0,
+0,0,0,0,0,0,0,0,0,0,
+0,0,0,0,0,0,0,0,0,0];
+if (gameInit==true){
+money1=10000;
+money2=10000;
+activeMoney=10000;
+gameInit=false;
+
+}
+if (document.getElementById('powerBar').value>0 ) {nukeStatus[activePlayer]=nukeStatus[activePlayer]+nukeSum;}
+
+if (activePlayer==1) {money1=activeMoney;activePlayer=2;activeMoney=money2;playSound("nextturn");alert('Player 2 turn');playSound("tax");alert (countMoney()+" $ income from taxes");activeMoney=activeMoney+countMoney();nukeSredraw();return}
+if (activePlayer==2) {money2=activeMoney;activePlayer=1;activeMoney=money1;playSound("nextturn");alert('Player 1 turn');playSound("tax");alert (countMoney()+" $ income from taxes");activeMoney=activeMoney+countMoney();redraw();return}
+}
+</script>
+</html>
